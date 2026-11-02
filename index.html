@@ -1,0 +1,595 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Control Diario</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Antonio:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f5f3ef;--card:#fff;--ink:#1c1c20;--mut:#6d6b72;--line:#e5e1da;--soft:#efebe4;--acc:#c8102e;--ok:#1e9a57;--warn:#d68a00;--bad:#d64040;--today:#2f6fdb}
+@media (prefers-color-scheme:dark){:root{--bg:#141416;--card:#1d1d21;--ink:#f1efeb;--mut:#9a98a0;--line:#2e2d33;--soft:#26252b;--acc:#ff4d5e}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 Inter,system-ui,Arial,sans-serif}
+h1,h2,h3,.num{font-family:Antonio,Arial Narrow,sans-serif;font-weight:700;letter-spacing:.01em}
+header{position:sticky;top:0;z-index:20;background:var(--card);border-bottom:1px solid var(--line)}
+.hwrap{max-width:1280px;margin:0 auto;padding:10px 16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.brand h1{margin:0;font-size:22px}.brand small{color:var(--mut);display:block;font-size:12px}
+.tabs{display:flex;gap:4px;margin-left:auto}
+.tabs button,.btn{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:7px 12px;border-radius:8px;cursor:pointer;font:inherit;font-weight:500}
+.tabs button.on{background:var(--ink);color:var(--card);border-color:var(--ink)}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+.btn.sm{padding:4px 9px;font-size:12px}
+.meta-h{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--mut)}
+#sync.err{color:var(--bad);font-weight:600}
+main{max-width:1280px;margin:0 auto;padding:16px}
+.demo{background:#fff4d6;color:#6b4e00;border:1px solid #f0d58a;padding:8px 12px;border-radius:8px;margin-bottom:12px;font-size:13px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.kpi .num{font-size:32px;line-height:1}.kpi span{color:var(--mut);font-size:12px}
+.kpi.bad .num{color:var(--bad)}.kpi.warn .num{color:var(--warn)}.kpi.today .num{color:var(--today)}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:16px}
+.panel h2{margin:0 0 10px;font-size:20px}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:7px;padding:6px 8px;min-width:0}
+textarea{width:100%;min-height:90px;resize:vertical}
+.focus-list .fl{display:grid;grid-template-columns:150px 1fr 110px 130px 90px;gap:8px;padding:7px 4px;border-bottom:1px solid var(--line);align-items:center;cursor:pointer}
+.focus-list .fl:last-child{border-bottom:0}
+.tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;background:var(--soft);color:var(--mut);white-space:nowrap}
+.tag.bad{background:#fde3e3;color:#a12020}.tag.warn{background:#fff0cc;color:#7a5200}.tag.ok{background:#dcf3e5;color:#156b3d}.tag.today{background:#dfe9fb;color:#1f4fa3}
+@media (prefers-color-scheme:dark){.tag.bad{background:#4a1f22;color:#ffb3b3}.tag.warn{background:#4a3a12;color:#ffd77a}.tag.ok{background:#173a28;color:#8fe0b2}.tag.today{background:#1c2c4a;color:#9bbcff}.demo{background:#3a3016;color:#ffe08a;border-color:#5c4b1d}}
+.acct{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:10px;overflow:hidden}
+.acct-h{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:11px 14px;cursor:pointer}
+.acct-h h3{margin:0;font-size:18px;flex:1;min-width:160px}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block;background:var(--mut)}
+.dot.ok{background:var(--ok)}.dot.warn{background:var(--warn)}.dot.bad{background:var(--bad)}
+.acct-b{border-top:1px solid var(--line);padding:10px 14px}
+.item{display:grid;grid-template-columns:minmax(130px,1.1fr) 115px minmax(170px,2fr) 135px 128px 128px 140px minmax(90px,1fr) 104px;gap:6px;align-items:center;padding:6px 0;border-bottom:1px dashed var(--line)}
+.item.ihead{font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;padding:0 0 4px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:var(--card);color:var(--ink);padding:7px 12px;font:inherit;font-weight:500;cursor:pointer}
+.seg button.on{background:var(--ink);color:var(--card)}
+.avatar{width:30px;height:30px;border-radius:50%;background:var(--acc);color:#fff;display:grid;place-items:center;font-family:Antonio,Arial Narrow,sans-serif;font-weight:700;font-size:16px}
+.acct-h h3 small{font-family:Inter,system-ui,sans-serif;font-weight:500;font-size:12px;color:var(--mut);margin-left:6px}
+.newf .n-t{flex:2;min-width:200px}
+.newf select{min-width:130px}
+.item:last-of-type{border-bottom:0}
+.item.late{background:linear-gradient(90deg,rgba(214,64,64,.10),transparent 40%)}
+.item.today{background:linear-gradient(90deg,rgba(47,111,219,.10),transparent 40%)}
+.item.blk select[data-f=bloqueo]{border-color:var(--warn);color:var(--warn);font-weight:600}
+.tipo{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;font-size:11px;font-weight:700;color:#fff;background:var(--acc)}
+.tipo.p{background:#5b5bd6}
+.done{border:1px solid var(--ok);background:var(--card);border-radius:7px;height:32px;cursor:pointer;color:var(--ok);font:inherit;font-size:12px;font-weight:600;padding:0 8px;white-space:nowrap}
+.fin{margin-top:10px;padding-top:8px;border-top:1px solid var(--line);font-size:12px;color:var(--mut)}
+.fin .fr{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:4px 0}
+.fin .fr b{color:var(--ink);font-weight:600}
+.lbl{display:flex;flex-direction:column;font-size:10px;color:var(--mut);gap:2px}
+input.bad-d{border-color:var(--bad);color:var(--bad)}
+.done:hover{background:var(--ok);color:#fff}
+.newf{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.newf input{flex:1;min-width:200px}
+.empty{color:var(--mut);font-size:13px;padding:6px 0}
+.bar{height:8px;background:var(--soft);border-radius:99px;position:relative;overflow:hidden;min-width:90px}
+.bar i{position:absolute;left:0;top:0;bottom:0;background:var(--ok);border-radius:99px}
+.bar i.p{background:#8fd3ad}
+.bar b{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--ink)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;cursor:pointer;display:flex;flex-direction:column;gap:8px}
+.card:hover{border-color:var(--ink)}
+.card h3{margin:0;font-size:19px;display:flex;align-items:center;gap:8px}
+.card .row{display:flex;justify-content:space-between;flex-wrap:wrap;gap:2px 8px;font-size:12px;color:var(--mut)}
+.mini{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;text-align:center}
+.mini div{background:var(--soft);border-radius:8px;padding:6px 2px}.mini .num{font-size:20px;display:block}.mini span{font-size:11px;color:var(--mut)}
+.mini .r .num{color:var(--bad)}.mini .w .num{color:var(--warn)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+.load-row{display:grid;grid-template-columns:90px 1fr 40px;gap:8px;align-items:center;margin:6px 0;font-size:13px}
+.stack{display:flex;height:14px;border-radius:5px;overflow:hidden;background:var(--soft)}
+.stack i{display:block}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:7px 6px;border-bottom:1px solid var(--line)}
+th{color:var(--mut);font-weight:500;font-size:12px}
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;z-index:50;padding:20px;overflow:auto}
+#modal.on{display:block}
+.mbox{background:var(--card);max-width:900px;margin:20px auto;border-radius:14px;padding:18px}
+.mbox h2{margin:0 0 4px;font-size:26px}
+.gate{position:fixed;inset:0;background:var(--bg);z-index:60;display:grid;place-items:center;padding:20px}
+.gate .box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:24px;max-width:360px;width:100%;text-align:center}
+.gate h2{margin:0 0 6px;font-size:26px}
+.gate .opts{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--mut);margin-bottom:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+@media(max-width:1000px){
+ .item{grid-template-columns:1fr 1fr;padding:10px 0}
+ .item.ihead{display:none}
+ .item .f-tit,.item .f-not{grid-column:1 / -1}
+ .focus-list .fl{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+<header><div class="hwrap">
+  <div class="brand"><h1>Control diario</h1><small id="hdate"></small></div>
+  <div class="meta-h"><span id="who"></span><span>·</span><span id="sync">—</span><button class="btn sm" data-act="refresh">Actualizar</button></div>
+  <nav class="tabs"><button data-act="tab" data-v="reunion" class="on">Reunión de hoy</button><button data-act="tab" data-v="dash">Dashboard</button></nav>
+</div></header>
+<main id="app"></main>
+<div id="modal"></div>
+<div id="gate"></div>
+
+<script>
+/* ==================== CONFIGURACIÓN ==================== */
+const CONFIG = {
+  // Pega aquí la URL de la App web de Apps Script (termina en /exec).
+  // Si está vacía, el cuadro funciona en MODO PRUEBA guardando solo en este navegador.
+  API_URL: 'https://script.google.com/macros/s/AKfycbxicgkk7ZnMWzpgA7zvlKsVGSpCOpfEv2HvK7hLzADLoLKVUe2CV8upoHVv0NDlLBQlMg/exec'
+};
+/* Equipo de producción: la reunión se recorre persona por persona */
+const PRODUCCION = [
+  {n:'Diego',   rol:'Editor'},
+  {n:'Jairo',   rol:'Editor'},
+  {n:'Richard', rol:'Diseñador'},
+  {n:'Adriana', rol:'Diseñadora'}
+];
+const EQUIPO   = PRODUCCION.map(p=>p.n);
+const REGISTRAN= ['Ashly','Yadhira','Pablo'];
+const ETAPAS_C = ['Por hacer','En proceso','Revisión interna','Corrección','Terminado','Publicado'];
+const ETAPAS_P = ['Abierto','En curso','Esperando cliente','Hecho'];
+const EN_MANOS = ['Por hacer','En proceso','Corrección'];   // etapas en que la tarea está en manos del editor/diseñador
+const CERRADAS = ['Terminado','Publicado','Hecho'];
+const FORMATOS = ['Reel','Video','Carrusel','Post','Historia','Portada','Pieza gráfica','Artículo LinkedIn','Otro'];
+const REDES    = ['Instagram','TikTok','Facebook','LinkedIn','YouTube','Varias'];
+const BLOQUEOS = ['Esperando material del cliente','Esperando aprobación del cliente','Falta grabación','Carga de editor / diseño','Falta información interna','Otro'];
+const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+
+/* Cuentas de ejemplo para el modo prueba (en producción vienen del Sheet) */
+const SEED_CUENTAS = [
+ ['Gran Tauro','Mensual',12,'mes','','','','','SI',''],
+ ['Escuelas del Mundo','','','','','','2026-11-15','','SI','Sin cantidad definida'],
+ ['Anilu','Trimestral','','','','','2026-11-11','','SI','Renovación 11 nov'],
+ ['Modeco','Trimestral',8,'contrato','','2026-09-07','2026-12-07','','SI','8 videos por trimestre'],
+ ['Nua Baby','Trimestral','','','','','2026-11-18','','SI','Sin cantidad definida'],
+ ['Propósito','Trimestral',12,'mes','','2026-08-08','2026-11-08','','SI','12 videos al mes'],
+ ['Dolce Nonno','',6,'mes','','','2026-12-28','','SI','6 videos mensuales'],
+ ['HVH Inmuebles','Trimestral',12,'mes','','2026-07-15','2026-10-15','','SI',''],
+ ['Marina Rossel','Trimestral',12,'mes','','2026-07-15','2026-10-15','','SI','Culminó 15 oct'],
+ ['ONG ADI','Trimestral','','','','2026-07-03','2026-10-03','','SI','Sin cantidad definida'],
+ ['La Casa del Chicharrón','',12,'mes','','','2026-10-30','','SI',''],
+ ['Francisco Calizaya','Trimestral',12,'mes','','2026-06-13','2026-09-13','','SI',''],
+ ['3F Equipos','Trimestral',12,'mes','','2026-07-11','2026-10-11','','SI',''],
+ ['Fabiola Arteaga','','','','','','2026-12-31','','SI','Termina diciembre'],
+ ['La Espátula Verde (Karen Lema)','',12,'mes','','2026-10-13','','','SI','Confirmar si 13 oct es inicio o cierre'],
+ ['Anka','Mensual',9,'mes','','','','','SI',''],
+ ['Kapek Internacional','Mensual',12,'mes',28,'','','','SI','Corte el 28 de cada mes']
+];
+const CUENTA_KEYS=['cuenta','modalidad','meta','periodo_meta','dia_corte','inicio','fin','monto','activa','notas'];
+
+/* ==================== ESTADO ==================== */
+const ls=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);v===null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){return null}};
+const S={cuentas:[],items:[],reuniones:[],historial:[],user:ls('cd_user')||'',pin:ls('cd_pin')||'',view:'reunion',
+  open:new Set(JSON.parse(ls('cd_open')||'[]')),modo:ls('cd_modo')||'persona',focusK:null,q:'',solo:false,pending:{}};
+
+/* ==================== UTILIDADES ==================== */
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad=n=>String(n).padStart(2,'0');
+const iso=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const today=()=>new Date().toLocaleDateString('en-CA',{timeZone:'America/Lima'});
+const D=s=>new Date(s+'T12:00:00');
+const days=(a,b)=>Math.round((D(b)-D(a))/864e5);
+const fmt=s=>{if(!s)return'—';const d=D(s);return `${d.getDate()} ${MESES[d.getMonth()]}`};
+const stamp=()=>{const n=new Date();return today()+' '+n.toLocaleTimeString('es-PE',{timeZone:'America/Lima',hour:'2-digit',minute:'2-digit',hour12:false})};
+const uid=()=>'i'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const isOpen=i=>!CERRADAS.includes(i.etapa);
+const activas=()=>S.cuentas.filter(c=>String(c.activa||'SI').toUpperCase()!=='NO');
+
+function normCuenta(c){return {...c,meta:+c.meta||0,dia_corte:+c.dia_corte||0,periodo_meta:String(c.periodo_meta||'').toLowerCase().trim()}}
+
+function periodo(c){
+  const t=today();
+  if(c.periodo_meta==='contrato'&&c.inicio&&c.fin) return {ini:c.inicio,fin:c.fin,label:'del contrato'};
+  if(c.periodo_meta==='mes'){
+    const d=D(t);
+    if(c.dia_corte){
+      let s=new Date(d.getFullYear(),d.getMonth(),c.dia_corte,12);
+      if(d.getDate()<c.dia_corte) s=new Date(d.getFullYear(),d.getMonth()-1,c.dia_corte,12);
+      const e=new Date(s.getFullYear(),s.getMonth()+1,c.dia_corte-1,12);
+      return {ini:iso(s),fin:iso(e),label:`ciclo ${fmt(iso(s))} – ${fmt(iso(e))}`};
+    }
+    return {ini:iso(new Date(d.getFullYear(),d.getMonth(),1,12)),fin:iso(new Date(d.getFullYear(),d.getMonth()+1,0,12)),label:'del mes'};
+  }
+  return null;
+}
+function contrato(c){
+  if(!c.fin) return {k:'',txt:'Sin fecha de cierre'};
+  const d=days(today(),c.fin);
+  if(d<0) return {k:'bad',txt:`Vencido hace ${-d} d · confirmar renovación`};
+  if(d<=15) return {k:'warn',txt:`Vence en ${d} d (${fmt(c.fin)})`};
+  return {k:'ok',txt:`Vigente hasta ${fmt(c.fin)}`};
+}
+function stats(c){
+  const t=today();
+  const its=S.items.filter(i=>i.cuenta===c.cuenta);
+  const open=its.filter(isOpen);
+  const late=open.filter(i=>i.fecha_objetivo&&i.fecha_objetivo<t);
+  const lateHard=late.filter(i=>days(i.fecha_objetivo,t)>2);
+  const hoy=open.filter(i=>i.fecha_objetivo===t);
+  const bloq=open.filter(i=>i.bloqueo);
+  const prod=open.filter(i=>i.tipo==='Contenido');
+  const per=periodo(c);
+  let pub=0,prog=0,esperado=null,avance=null;
+  if(c.meta&&per){
+    pub=its.filter(i=>i.tipo!=='Pendiente'&&!isOpen(i)&&i.cerrado>=per.ini&&i.cerrado<=per.fin).length;
+    prog=prod.filter(i=>i.etapa==='Programado').length;
+    const tot=days(per.ini,per.fin)+1, el=Math.max(0,Math.min(tot,days(per.ini,t)+1));
+    esperado=c.meta*el/tot; avance=esperado>0?(pub+prog)/esperado:1;
+  }
+  // el ritmo de la meta solo se evalúa cuando la cuenta ya tiene registros (evita rojo falso el primer día)
+  const pace=its.length?avance:null;
+  let sem='ok';
+  if(lateHard.length||(pace!==null&&pace<.7)) sem='bad';
+  else if(late.length||bloq.length||(pace!==null&&pace<1)) sem='warn';
+  if(!its.length) sem='';
+  const prox=prod.filter(i=>i.fecha_objetivo&&i.fecha_objetivo>=t).sort((a,b)=>a.fecha_objetivo.localeCompare(b.fecha_objetivo))[0];
+  return {its,open,late,hoy,bloq,prod,per,pub,prog,esperado,avance,sem,prox,ct:contrato(c)};
+}
+
+/* ==================== API ==================== */
+async function apiGet(){
+  if(!CONFIG.API_URL) return demoDB();
+  const r=await fetch(CONFIG.API_URL+'?pin='+encodeURIComponent(S.pin));
+  const j=await r.json(); if(j.error) throw new Error(j.error); return j;
+}
+async function apiPost(action,data){
+  if(!CONFIG.API_URL) return demoPost(action,data);
+  const r=await fetch(CONFIG.API_URL,{method:'POST',body:JSON.stringify({action,data,pin:S.pin,user:S.user})});
+  const j=await r.json(); if(j.error) throw new Error(j.error); return j;
+}
+/* --- modo prueba (localStorage) --- */
+function demoDB(){
+  let db=null; try{db=JSON.parse(ls('cd_demo'))}catch(e){}
+  if(!db){db={cuentas:SEED_CUENTAS.map(r=>Object.fromEntries(CUENTA_KEYS.map((k,i)=>[k,r[i]]))),items:[],reuniones:[],historial:[]};ls('cd_demo',JSON.stringify(db))}
+  return db;
+}
+function demoPost(action,data){
+  const db=demoDB(), now=stamp();
+  if(action==='upsertItem'){
+    const ix=db.items.findIndex(i=>i.id===data.id);
+    if(ix<0){db.items.push(data);db.historial.push({fecha:now,id:data.id,cuenta:data.cuenta,campo:'creado',antes:'',despues:data.titulo,por:S.user})}
+    else{['cuenta','etapa','responsable','fecha_inicio','fecha_objetivo','bloqueo','titulo'].forEach(k=>{const a=String(db.items[ix][k]??''),b=String(data[k]??'');if(a!==b)db.historial.push({fecha:now,id:data.id,cuenta:data.cuenta,campo:k,antes:a,despues:b,por:S.user})});db.items[ix]=data}
+  }
+  if(action==='saveReunion'){const ix=db.reuniones.findIndex(r=>r.fecha===data.fecha);ix<0?db.reuniones.push(data):db.reuniones[ix]=data}
+  ls('cd_demo',JSON.stringify(db)); return {ok:true};
+}
+
+/* ==================== CARGA Y GUARDADO ==================== */
+function setSync(t,err){const el=document.getElementById('sync');el.textContent=t;el.classList.toggle('err',!!err)}
+async function load(silent){
+  if(!silent) setSync('Cargando…');
+  try{
+    const d=await apiGet();
+    S.cuentas=(d.cuentas||[]).filter(c=>c.cuenta).map(normCuenta);
+    S.items=(d.items||[]).map(i=>({...i,id:String(i.id)})).concat(Object.values(S.pending).filter(p=>!(d.items||[]).some(i=>String(i.id)===p.id)));
+    S.reuniones=d.reuniones||[]; S.historial=d.historial||[];
+    setSync(Object.keys(S.pending).length?'Cambios sin guardar':'Al día '+stamp().slice(11));
+    render();
+  }catch(e){
+    if(/pin/i.test(e.message)){ls('cd_pin',null);S.pin='';gatePin('PIN incorrecto');return}
+    setSync('Sin conexión: '+e.message,true);
+  }
+}
+async function save(it){
+  it.actualizado=stamp(); it.actualizado_por=S.user;
+  S.pending[it.id]={...it}; setSync('Guardando…');
+  try{await apiPost('upsertItem',it);delete S.pending[it.id];setSync(Object.keys(S.pending).length?'Guardando…':'Guardado '+stamp().slice(11))}
+  catch(e){setSync('No se guardó — toca Actualizar para reintentar',true)}
+}
+async function retryPending(){for(const it of Object.values(S.pending)) await save(it)}
+
+/* ==================== RENDER ==================== */
+function render(){
+  document.getElementById('hdate').textContent=new Date().toLocaleDateString('es-PE',{timeZone:'America/Lima',weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  document.getElementById('who').textContent=S.user?'Registra: '+S.user:'';
+  document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.v===S.view));
+  const y=window.scrollY;
+  document.getElementById('app').innerHTML=(CONFIG.API_URL?'':'<div class="demo"><b>Modo prueba:</b> los datos se guardan solo en este navegador. Conecta el Sheet pegando la URL del Apps Script en <code>CONFIG.API_URL</code>.</div>')+(S.view==='reunion'?viewReunion():viewDash());
+  window.scrollTo(0,y);
+}
+function sel(f,opts,v,ph,cls){
+  const o=(v&&!opts.includes(v))?[...opts,v]:opts;   // conserva valores antiguos que ya no están en la lista
+  return `<select ${f?`data-f="${f}"`:''} ${cls?`class="${cls}"`:''}>${ph!=null?`<option value="">${esc(ph)}</option>`:''}${o.map(x=>`<option ${x===v?'selected':''}>${esc(x)}</option>`).join('')}</select>`}
+const nombresCuentas=()=>activas().map(c=>c.cuenta).sort((a,b)=>a.localeCompare(b));
+/* by = 'persona' → la primera columna es el cliente; by = 'marca' → la primera columna es el responsable */
+function rowItem(i,by){
+  const t=today(),C=i.tipo!=='Pendiente';
+  const late=i.fecha_objetivo&&i.fecha_objetivo<t, hoy=i.fecha_objetivo===t;
+  return `<div class="item ${late?'late':''} ${hoy?'today':''} ${i.bloqueo?'blk':''}" data-id="${esc(i.id)}">
+   ${by==='persona'?sel('cuenta',nombresCuentas(),i.cuenta,null):sel('responsable',EQUIPO,i.responsable,'Sin asignar')}
+   ${C?sel('formato',FORMATOS,i.formato,'Formato'):'<span class="tag">Pendiente</span>'}
+   <input class="f-tit" data-f="titulo" value="${esc(i.titulo)}" placeholder="Nombre del video / pieza">
+   ${sel('etapa',C?ETAPAS_C:ETAPAS_P,i.etapa,null)}
+   <input type="date" data-f="fecha_inicio" value="${esc(i.fecha_inicio||'')}" title="Fecha de inicio">
+   <input type="date" data-f="fecha_objetivo" value="${esc(i.fecha_objetivo||'')}" title="Fecha de entrega" class="${i.fecha_inicio&&i.fecha_objetivo&&i.fecha_objetivo<i.fecha_inicio?'bad-d':''}">
+   ${sel('bloqueo',BLOQUEOS,i.bloqueo,'Sin bloqueo')}
+   <input class="f-not" data-f="notas" value="${esc(i.notas)}" placeholder="Notas">
+   <button class="done" data-act="close" title="Marcar como terminada">✓ Terminada</button>
+  </div>`;
+}
+/* fila de alta rápida: cliente (o responsable) + formato + nombre del video + entrega */
+function addRow(by,key){
+  return `<div class="newf" data-by="${by}" data-k="${esc(key)}">
+    ${by==='persona'?sel('',nombresCuentas(),'','Cliente…','n-c'):sel('',EQUIPO,'','Responsable…','n-r')}
+    ${sel('',FORMATOS,'','Formato…','n-f')}
+    <input class="n-t" placeholder="Nombre del video / pieza">
+    <label class="lbl">Inicio<input type="date" class="n-i" value="${today()}"></label>
+    <label class="lbl">Entrega<input type="date" class="n-d" value="${today()}"></label>
+    <button class="btn pri sm" data-act="add">Agregar</button>
+  </div>`;
+}
+function metaBar(s,c){
+  if(!c.meta||!s.per) return '';
+  const w=x=>Math.min(100,x/c.meta*100);
+  return `<div style="display:flex;align-items:center;gap:8px;min-width:160px"><div class="bar" style="flex:1"><i class="p" style="width:${w(s.pub+s.prog)}%"></i><i style="width:${w(s.pub)}%"></i><b style="left:${w(s.esperado)}%"></b></div><span class="tag">${s.pub}/${c.meta}</span></div>`;
+}
+
+function viewReunion(){
+  const t=today();
+  const all=S.items.filter(isOpen);
+  const hoy=all.filter(i=>i.fecha_objetivo===t), late=all.filter(i=>i.fecha_objetivo&&i.fecha_objetivo<t), bloq=all.filter(i=>i.bloqueo);
+  const focus=[...late.sort((a,b)=>a.fecha_objetivo.localeCompare(b.fecha_objetivo)),...hoy];
+  const acta=S.reuniones.find(r=>r.fecha===t)||{};
+  const q=S.q.toLowerCase();
+  let cuentas=activas().map(c=>({c,s:stats(c)}));
+  if(q) cuentas=cuentas.filter(x=>x.c.cuenta.toLowerCase().includes(q)||x.s.open.some(i=>(i.titulo||'').toLowerCase().includes(q)));
+  if(S.solo) cuentas=cuentas.filter(x=>x.s.open.length);
+  cuentas.sort((a,b)=>(b.s.late.length-a.s.late.length)||(b.s.hoy.length-a.s.hoy.length)||(b.s.open.length-a.s.open.length)||a.c.cuenta.localeCompare(b.c.cuenta));
+
+  return `
+  <div class="kpis">
+    <div class="kpi today"><div class="num">${hoy.length}</div><span>Tareas para hoy</span></div>
+    <div class="kpi ${late.length?'bad':''}"><div class="num">${late.length}</div><span>Atrasadas</span></div>
+    <div class="kpi ${bloq.length?'warn':''}"><div class="num">${bloq.length}</div><span>Bloqueadas</span></div>
+    <div class="kpi"><div class="num">${all.filter(i=>EN_MANOS.includes(i.etapa)).length}</div><span>En manos de editores / diseño</span></div>
+    <div class="kpi"><div class="num" style="color:var(--ok)">${S.items.filter(i=>!isOpen(i)&&i.cerrado===t).length}</div><span>Terminadas hoy</span></div>
+  </div>
+  ${focus.length?`<div class="panel"><h2>Foco del día</h2><div class="focus-list">${focus.map(i=>`
+    <div class="fl" data-act="jump" data-c="${esc(i.cuenta)}"><b>${esc(i.cuenta)}</b><span>${esc(i.titulo||'(sin descripción)')}</span><span>${esc(i.responsable||'Sin asignar')}</span><span>${esc(i.etapa)}</span>
+    ${i.fecha_objetivo<t?`<span class="tag bad">${days(i.fecha_objetivo,t)} d atraso</span>`:'<span class="tag today">Hoy</span>'}</div>`).join('')}</div></div>`:''}
+  <div class="toolbar">
+    <div class="seg"><button data-act="modo" data-v="persona" class="${S.modo==='persona'?'on':''}">Por editor / diseñador</button><button data-act="modo" data-v="marca" class="${S.modo==='marca'?'on':''}">Por marca</button></div>
+    <input id="q" placeholder="Buscar cliente o video…" value="${esc(S.q)}" style="flex:1;min-width:200px">
+    ${S.modo==='marca'?`<label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="solo" ${S.solo?'checked':''}> Solo marcas con algo abierto</label>
+    <button class="btn sm" data-act="expand">Abrir todas</button><button class="btn sm" data-act="collapse">Cerrar todas</button>`:''}
+  </div>
+  ${S.modo==='persona'?viewPersonas(all,q):''}
+  ${S.modo==='marca'?cuentas.map(({c,s})=>`
+   <div class="acct" id="a-${esc(c.cuenta)}">
+    <div class="acct-h" data-act="toggle" data-c="${esc(c.cuenta)}">
+      <span class="dot ${s.sem}"></span><h3>${esc(c.cuenta)}</h3>
+      ${s.late.length?`<span class="tag bad">${s.late.length} atrasado${s.late.length>1?'s':''}</span>`:''}
+      ${s.hoy.length?`<span class="tag today">${s.hoy.length} hoy</span>`:''}
+      ${s.bloq.length?`<span class="tag warn">${s.bloq.length} bloqueado${s.bloq.length>1?'s':''}</span>`:''}
+      <span class="tag">${s.open.length} abiertos</span>
+      ${s.ct.k==='bad'||s.ct.k==='warn'?`<span class="tag ${s.ct.k}">${esc(s.ct.txt)}</span>`:''}
+      ${metaBar(s,c)}
+    </div>
+    ${S.open.has(c.cuenta)?`<div class="acct-b">
+      ${s.open.length?s.open.sort((a,b)=>(a.fecha_objetivo||'9').localeCompare(b.fecha_objetivo||'9')).map(i=>rowItem(i,'marca')).join(''):'<div class="empty">Sin videos ni piezas abiertas.</div>'}
+      ${addRow('marca',c.cuenta)}
+      <div style="margin-top:8px"><button class="btn sm" data-act="acct" data-c="${esc(c.cuenta)}">Ver ficha de la marca</button></div>
+    </div>`:''}
+   </div>`).join(''):''}
+  <div class="panel" style="margin-top:16px"><h2>Acta de la reunión · ${fmt(t)}</h2>
+    <div class="toolbar">${[...REGISTRAN,...EQUIPO].map(p=>`<label style="display:flex;gap:4px;align-items:center"><input type="checkbox" class="asis" value="${p}" ${String(acta.asistentes||'').split(', ').includes(p)?'checked':''}> ${p}</label>`).join('')}</div>
+    <textarea id="acta" placeholder="Acuerdos, temas generales, avisos para el equipo…">${esc(acta.notas||'')}</textarea>
+    <div style="margin-top:8px;display:flex;gap:8px;align-items:center"><button class="btn pri" data-act="saveActa">Guardar acta</button>${acta.actualizado?`<span class="tag">Guardada ${esc(acta.actualizado)} por ${esc(acta.registrado_por||'')}</span>`:''}</div>
+  </div>`;
+}
+
+function viewPersonas(all,q){
+  const t=today(), hace7=iso(new Date(D(t)-7*864e5));
+  const term=S.items.filter(i=>!isOpen(i)&&i.cerrado>=hace7);
+  const match=i=>!q||(i.cuenta||'').toLowerCase().includes(q)||(i.titulo||'').toLowerCase().includes(q);
+  const grupos=[...PRODUCCION.map(p=>({...p,its:all.filter(i=>i.responsable===p.n)}))];
+  const sinResp=all.filter(i=>!EQUIPO.includes(i.responsable));
+  if(sinResp.length) grupos.push({n:'',rol:'Sin asignar',its:sinResp});
+  return grupos.map(g=>{
+    const its=g.its.filter(match).sort((a,b)=>(a.fecha_objetivo||'9').localeCompare(b.fecha_objetivo||'9'));
+    const hoy=g.its.filter(i=>i.fecha_objetivo===t).length, late=g.its.filter(i=>i.fecha_objetivo&&i.fecha_objetivo<t).length;
+    const manos=g.its.filter(i=>EN_MANOS.includes(i.etapa)).length, bloq=g.its.filter(i=>i.bloqueo).length;
+    const marcas=[...new Set(g.its.map(i=>i.cuenta))].length;
+    const fin=term.filter(i=>g.n?i.responsable===g.n:!EQUIPO.includes(i.responsable)).sort((a,b)=>b.cerrado.localeCompare(a.cerrado));
+    const finHoy=fin.filter(i=>i.cerrado===t).length;
+    return `<div class="acct person">
+      <div class="acct-h" style="cursor:default">
+        <span class="avatar">${esc((g.n||'?')[0])}</span>
+        <h3>${esc(g.n||'Sin asignar')} <small>${esc(g.n?g.rol:'')}</small></h3>
+        ${late?`<span class="tag bad">${late} atrasado${late>1?'s':''}</span>`:''}
+        ${hoy?`<span class="tag today">${hoy} para hoy</span>`:''}
+        ${bloq?`<span class="tag warn">${bloq} bloqueado${bloq>1?'s':''}</span>`:''}
+        ${finHoy?`<span class="tag ok">${finHoy} terminada${finHoy>1?'s':''} hoy</span>`:''}
+        <span class="tag">${manos} en sus manos · ${marcas} marca${marcas!==1?'s':''}</span>
+      </div>
+      <div class="acct-b">
+        ${its.length?`<div class="item ihead"><span>Cliente</span><span>Formato</span><span>Nombre del video / pieza</span><span>Etapa</span><span>Inicio</span><span>Entrega</span><span>Bloqueo</span><span>Notas</span><span></span></div>`+its.map(i=>rowItem(i,'persona')).join(''):'<div class="empty">Sin tareas abiertas.</div>'}
+        ${g.n?addRow('persona',g.n):''}
+        ${fin.length?`<div class="fin"><b>Terminadas en los últimos 7 días (${fin.length})</b>${fin.map(i=>{
+          const dl=i.fecha_objetivo?days(i.fecha_objetivo,i.cerrado):0;
+          return `<div class="fr"><span class="tag ok">✓ ${fmt(i.cerrado)}</span><b>${esc(i.cuenta)}</b><span>${esc(i.formato||'')} · ${esc(i.titulo)}</span>
+          ${i.fecha_inicio?`<span>${days(i.fecha_inicio,i.cerrado)+1} d de trabajo</span>`:''}
+          ${dl>0?`<span class="tag bad">${dl} d tarde</span>`:'<span class="tag ok">a tiempo</span>'}
+          <button class="btn sm" data-act="reopen" data-id="${esc(i.id)}">Reabrir</button></div>`}).join('')}</div>`:''}
+      </div>
+    </div>`}).join('');
+}
+
+function viewDash(){
+  const t=today(), d=D(t);
+  const mIni=iso(new Date(d.getFullYear(),d.getMonth(),1,12));
+  const open=S.items.filter(isOpen);
+  const pubMes=S.items.filter(i=>i.tipo!=='Pendiente'&&!isOpen(i)&&i.cerrado>=mIni&&i.cerrado<=t).length;
+  const late=open.filter(i=>i.fecha_objetivo&&i.fecha_objetivo<t);
+  const rows=activas().map(c=>({c,s:stats(c)}));
+  const venc=rows.filter(x=>x.s.ct.k==='bad').length, porV=rows.filter(x=>x.s.ct.k==='warn').length;
+  const ord={bad:0,warn:1,ok:2,'':3};
+  rows.sort((a,b)=>ord[a.s.sem]-ord[b.s.sem]||a.c.cuenta.localeCompare(b.c.cuenta));
+  // carga
+  const carga=EQUIPO.map(p=>{const o=open.filter(i=>i.responsable===p);return {p,n:o.length,l:o.filter(i=>i.fecha_objetivo&&i.fecha_objetivo<t).length}}).filter(x=>x.n);
+  const sinResp=open.filter(i=>!i.responsable).length;
+  const maxC=Math.max(1,...carga.map(x=>x.n));
+  const bl={};open.filter(i=>i.bloqueo).forEach(i=>{(bl[i.bloqueo]=bl[i.bloqueo]||[]).push(i.cuenta)});
+  const etapas={};open.filter(i=>i.tipo==='Contenido').forEach(i=>etapas[i.etapa]=(etapas[i.etapa]||0)+1);
+  const maxE=Math.max(1,...Object.values(etapas));
+  return `
+  <div class="kpis">
+    <div class="kpi"><div class="num">${pubMes}</div><span>Terminados en ${MESES[d.getMonth()]}</span></div>
+    <div class="kpi"><div class="num">${open.filter(i=>i.tipo==='Contenido').length}</div><span>En producción</span></div>
+    <div class="kpi ${late.length?'bad':''}"><div class="num">${late.length}</div><span>Atrasados</span></div>
+    <div class="kpi ${open.some(i=>i.bloqueo)?'warn':''}"><div class="num">${open.filter(i=>i.bloqueo).length}</div><span>Bloqueados</span></div>
+    <div class="kpi ${venc?'bad':''}"><div class="num">${venc}</div><span>Contratos vencidos</span></div>
+    <div class="kpi ${porV?'warn':''}"><div class="num">${porV}</div><span>Vencen en ≤15 días</span></div>
+  </div>
+  <div class="panel"><h2>Estado por cuenta</h2>
+   <div class="legend"><span><i style="background:var(--ok)"></i>Terminado</span><span><i style="background:var(--ink);width:3px"></i>Lo esperado a la fecha</span></div>
+   <div class="cards">${rows.map(({c,s})=>`
+    <div class="card" data-act="acct" data-c="${esc(c.cuenta)}">
+      <h3><span class="dot ${s.sem}"></span>${esc(c.cuenta)}</h3>
+      <span class="tag ${s.ct.k}" style="align-self:flex-start">${esc(s.ct.txt)}</span>
+      ${c.meta&&s.per?`<div><div class="row"><span>Meta ${s.per.label}</span><span><b style="color:var(--ink)">${s.pub}</b> terminados / ${c.meta}</span></div>${metaBar(s,c)}</div>`:`<div class="row"><span>Sin meta de cantidad</span><span>${s.its.filter(i=>!isOpen(i)&&i.cerrado>=mIni).length} terminados este mes</span></div>`}
+      <div class="mini"><div><b class="num">${s.prod.length}</b><span>En proceso</span></div><div class="${s.late.length?'r':''}"><b class="num">${s.late.length}</b><span>Atrasados</span></div><div class="${s.bloq.length?'w':''}"><b class="num">${s.bloq.length}</b><span>Bloqueados</span></div></div>
+      <div class="row"><span>Próxima publicación</span><span>${s.prox?esc(fmt(s.prox.fecha_objetivo)+' · '+(s.prox.formato||s.prox.titulo||'')):'—'}</span></div>
+    </div>`).join('')}</div>
+  </div>
+  <div class="grid2">
+   <div class="panel"><h2>Carga por persona</h2>
+    ${carga.length?carga.map(x=>`<div class="load-row"><b>${esc(x.p)}</b><div class="stack" style="width:${x.n/maxC*100}%"><i style="width:${(x.n-x.l)/x.n*100}%;background:var(--ok)"></i><i style="width:${x.l/x.n*100}%;background:var(--bad)"></i></div><span>${x.n}</span></div>`).join(''):'<div class="empty">Aún no hay ítems asignados.</div>'}
+    ${sinResp?`<p class="tag warn">${sinResp} ítem${sinResp>1?'s':''} sin responsable</p>`:''}
+    <div class="legend" style="margin-top:8px"><span><i style="background:var(--ok)"></i>A tiempo</span><span><i style="background:var(--bad)"></i>Atrasado</span></div>
+   </div>
+   <div class="panel"><h2>Embudo de producción</h2>
+    ${ETAPAS_C.filter(e=>!CERRADAS.includes(e)).map(e=>`<div class="load-row" style="grid-template-columns:130px 1fr 30px"><span>${e}</span><div class="stack" style="width:${(etapas[e]||0)/maxE*100}%;min-width:${etapas[e]?6:0}px"><i style="width:100%;background:var(--acc)"></i></div><span>${etapas[e]||0}</span></div>`).join('')}
+   </div>
+  </div>
+  <div class="grid2">
+   <div class="panel"><h2>Bloqueos</h2>
+    ${Object.keys(bl).length?`<table><tr><th>Motivo</th><th>Cant.</th><th>Cuentas</th></tr>${Object.entries(bl).sort((a,b)=>b[1].length-a[1].length).map(([m,cs])=>`<tr><td>${esc(m)}</td><td>${cs.length}</td><td>${esc([...new Set(cs)].join(', '))}</td></tr>`).join('')}</table>`:'<div class="empty">Sin bloqueos registrados.</div>'}
+   </div>
+   <div class="panel"><h2>Contratos</h2>
+    <table><tr><th>Cuenta</th><th>Modalidad</th><th>Cierre</th><th>Estado</th></tr>
+    ${activas().slice().sort((a,b)=>(a.fin||'9').localeCompare(b.fin||'9')).map(c=>{const k=contrato(c);return `<tr><td>${esc(c.cuenta)}</td><td>${esc(c.modalidad||'—')}</td><td>${fmt(c.fin)}</td><td><span class="tag ${k.k}">${esc(k.txt)}</span></td></tr>`}).join('')}</table>
+   </div>
+  </div>`;
+}
+
+function modalCuenta(name){
+  const c=S.cuentas.find(x=>x.cuenta===name); if(!c) return;
+  const s=stats(c);
+  const cerr=s.its.filter(i=>!isOpen(i)).sort((a,b)=>(b.cerrado||'').localeCompare(a.cerrado||'')).slice(0,15);
+  const hist=S.historial.filter(h=>h.cuenta===name).slice(-25).reverse();
+  const li=i=>`<tr><td>${i.tipo==='Contenido'?'C':'P'}</td><td>${esc(i.titulo)}</td><td>${esc(i.formato||'')}</td><td>${esc(i.responsable||'—')}</td><td>${esc(i.etapa)}</td><td>${fmt(i.fecha_objetivo)}</td><td>${i.bloqueo?`<span class="tag warn">${esc(i.bloqueo)}</span>`:''}</td></tr>`;
+  const m=document.getElementById('modal');
+  m.innerHTML=`<div class="mbox">
+    <div style="display:flex;justify-content:space-between;gap:10px;align-items:start"><div><h2><span class="dot ${s.sem}"></span> ${esc(c.cuenta)}</h2>
+    <span class="tag ${s.ct.k}">${esc(s.ct.txt)}</span> ${c.modalidad?`<span class="tag">${esc(c.modalidad)}</span>`:''} ${c.meta?`<span class="tag">Meta ${c.meta} ${s.per?esc(s.per.label):''}</span>`:''}
+    ${c.notas?`<p style="color:var(--mut)">${esc(c.notas)}</p>`:''}</div><button class="btn" data-act="mclose">Cerrar</button></div>
+    ${c.meta&&s.per?`<p>${s.pub} terminados de ${c.meta}. A la fecha se esperaban ~${Math.round(s.esperado)}.</p>${metaBar(s,c)}`:''}
+    <h3 style="margin-top:16px">Abiertos (${s.open.length})</h3>
+    ${s.open.length?`<table><tr><th></th><th>Descripción</th><th>Formato</th><th>Responsable</th><th>Etapa</th><th>Fecha</th><th>Bloqueo</th></tr>${s.open.map(li).join('')}</table>`:'<div class="empty">Nada abierto.</div>'}
+    <h3 style="margin-top:16px">Cerrados recientes</h3>
+    ${cerr.length?`<table><tr><th></th><th>Descripción</th><th>Formato</th><th>Responsable</th><th>Etapa</th><th>Fecha</th><th></th></tr>${cerr.map(li).join('')}</table>`:'<div class="empty">Aún no hay cerrados.</div>'}
+    <h3 style="margin-top:16px">Últimos movimientos</h3>
+    ${hist.length?`<table><tr><th>Cuándo</th><th>Quién</th><th>Cambio</th></tr>${hist.map(h=>`<tr><td>${esc(h.fecha)}</td><td>${esc(h.por)}</td><td>${h.campo==='creado'?'Creó: '+esc(h.despues):`${esc(h.campo.replace('_',' '))}: ${esc(h.antes||'—')} → <b>${esc(h.despues||'—')}</b>`}</td></tr>`).join('')}</table>`:'<div class="empty">Sin movimientos.</div>'}
+  </div>`;
+  m.classList.add('on');
+}
+
+/* ==================== EVENTOS ==================== */
+document.addEventListener('change',e=>{
+  const el=e.target, row=el.closest('.item');
+  if(row&&el.dataset.f){
+    const it=S.items.find(x=>x.id===row.dataset.id); if(!it) return;
+    const f=el.dataset.f; it[f]=el.value;
+    if(f==='etapa') it.cerrado=CERRADAS.includes(el.value)?today():'';
+    save(it); if(f!=='titulo'&&f!=='notas') render(); return;
+  }
+  if(el.id==='solo'){S.solo=el.checked;render()}
+});
+document.addEventListener('input',e=>{if(e.target.id==='q'){S.q=e.target.value;clearTimeout(window._qt);window._qt=setTimeout(()=>{render();const q=document.getElementById('q');q.focus();q.setSelectionRange(q.value.length,q.value.length)},300)}});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.closest('.newf')){e.preventDefault();addFrom(e.target.closest('.newf'))} if(e.key==='Escape')closeModal()});
+function addFrom(f){
+  const by=f.dataset.by, k=f.dataset.k, g=s=>f.querySelector(s);
+  const cuenta=by==='persona'?g('.n-c').value:k, resp=by==='persona'?k:g('.n-r').value;
+  const tit=g('.n-t').value.trim(), formato=g('.n-f').value, fecha=g('.n-d').value, ini=g('.n-i').value;
+  if(ini&&fecha&&fecha<ini){g('.n-d').classList.add('bad-d');g('.n-d').focus();return}
+  if(by==='persona'&&!cuenta){g('.n-c').focus();g('.n-c').style.borderColor='var(--bad)';return}
+  if(!tit){g('.n-t').focus();g('.n-t').style.borderColor='var(--bad)';return}
+  const it={id:uid(),creado:stamp(),creado_por:S.user,cuenta,tipo:'Contenido',titulo:tit,formato,red:'',responsable:resp,
+    etapa:'Por hacer',fecha_inicio:ini,fecha_objetivo:fecha,bloqueo:'',notas:'',cerrado:''};
+  S.items.push(it); render(); save(it);
+  // deja listo el mismo renglón para cargar la siguiente tarea (conserva cliente y formato)
+  const nf=document.querySelector(`.newf[data-by="${by}"][data-k="${CSS.escape(k)}"]`);
+  if(nf){ if(by==='persona') nf.querySelector('.n-c').value=cuenta; else nf.querySelector('.n-r').value=resp;
+    nf.querySelector('.n-f').value=formato; nf.querySelector('.n-d').value=fecha; nf.querySelector('.n-i').value=ini; nf.querySelector('.n-t').focus(); }
+}
+function persistOpen(){ls('cd_open',JSON.stringify([...S.open]))}
+function closeModal(){const m=document.getElementById('modal');m.classList.remove('on');m.innerHTML=''}
+document.addEventListener('click',async e=>{
+  if(e.target.id==='modal'){closeModal();return}
+  const a=e.target.closest('[data-act]'); if(!a) return;
+  if(e.target.closest('.acct-h')&&e.target.closest('select,input')) return;
+  const act=a.dataset.act, c=a.dataset.c;
+  switch(act){
+    case 'tab': S.view=a.dataset.v; render(); window.scrollTo(0,0); break;
+    case 'refresh': await retryPending(); load(); break;
+    case 'toggle': S.open.has(c)?S.open.delete(c):S.open.add(c); persistOpen(); render(); break;
+    case 'expand': activas().forEach(x=>S.open.add(x.cuenta)); persistOpen(); render(); break;
+    case 'collapse': S.open.clear(); persistOpen(); render(); break;
+    case 'jump': S.view='reunion'; S.modo='marca'; S.open.add(c); persistOpen(); render(); document.getElementById('a-'+c)?.scrollIntoView({behavior:'smooth',block:'start'}); break;
+    case 'modo': S.modo=a.dataset.v; ls('cd_modo',S.modo); render(); break;
+    case 'add': addFrom(a.closest('.newf')); break;
+    case 'close': {
+      const it=S.items.find(x=>x.id===a.closest('.item').dataset.id);
+      it.etapa=it.tipo==='Pendiente'?'Hecho':'Terminado'; it.cerrado=today(); it.bloqueo='';
+      render(); save(it); setSync('Tarea terminada ✓'); break;
+    }
+    case 'reopen': {
+      const it=S.items.find(x=>x.id===a.dataset.id);
+      it.etapa='En proceso'; it.cerrado=''; render(); save(it); break;
+    }
+    case 'acct': modalCuenta(c); break;
+    case 'mclose': closeModal(); break;
+    case 'saveActa': {
+      const data={fecha:today(),registrado_por:S.user,asistentes:[...document.querySelectorAll('.asis:checked')].map(x=>x.value).join(', '),notas:document.getElementById('acta').value,actualizado:stamp()};
+      const ix=S.reuniones.findIndex(r=>r.fecha===data.fecha); ix<0?S.reuniones.push(data):S.reuniones[ix]=data;
+      setSync('Guardando acta…');
+      try{await apiPost('saveReunion',data);setSync('Acta guardada');render()}catch(err){setSync('No se guardó el acta',true)}
+      break;
+    }
+    case 'setuser': S.user=a.dataset.u; ls('cd_user',S.user); document.getElementById('gate').innerHTML=''; start(); break;
+    case 'changeuser': gateUser(); break;
+  }
+});
+document.getElementById('who').addEventListener('click',()=>gateUser());
+document.getElementById('who').style.cursor='pointer';
+
+/* ==================== INICIO ==================== */
+function gatePin(msg){
+  document.getElementById('gate').innerHTML=`<div class="gate"><div class="box"><h2>Control diario</h2><p style="color:var(--mut)">${msg||'Ingresa el PIN del equipo'}</p>
+  <input id="pin" type="password" inputmode="numeric" style="width:100%;text-align:center;font-size:18px"><div class="opts"><button class="btn pri" id="pinok">Entrar</button></div></div></div>`;
+  const go=()=>{S.pin=document.getElementById('pin').value.trim();if(!S.pin)return;ls('cd_pin',S.pin);document.getElementById('gate').innerHTML='';start()};
+  document.getElementById('pinok').onclick=go; document.getElementById('pin').onkeydown=e=>{if(e.key==='Enter')go()}; document.getElementById('pin').focus();
+}
+function gateUser(){
+  document.getElementById('gate').innerHTML=`<div class="gate"><div class="box"><h2>¿Quién registra?</h2><p style="color:var(--mut)">Cada cambio queda firmado con este nombre.</p>
+  <div class="opts">${REGISTRAN.map(u=>`<button class="btn ${u===S.user?'pri':''}" data-act="setuser" data-u="${u}">${u}</button>`).join('')}</div></div></div>`;
+}
+function start(){
+  if(CONFIG.API_URL&&!S.pin) return gatePin();
+  if(!S.user) return gateUser();
+  render(); load();
+}
+// refresco automático cada 90 s si nadie está escribiendo (para trabajar juntas)
+setInterval(()=>{const a=document.activeElement;if(document.hidden||(a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName))||document.getElementById('modal').classList.contains('on'))return;load(true)},90000);
+start();
+</script>
+</body>
+</html>
