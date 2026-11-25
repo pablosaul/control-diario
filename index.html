@@ -124,6 +124,33 @@ th{color:var(--mut);font-weight:500;font-size:12px}
  .lrow .c-act{justify-content:flex-start;margin-top:4px}
  .eform{grid-template-columns:1fr}
 }
+.ptable{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.prow{display:grid;grid-template-columns:minmax(110px,1.2fr) 60px 90px 80px 90px 80px 90px minmax(160px,2fr);gap:8px;align-items:center;padding:9px 12px;border-bottom:1px solid var(--line);font-size:13px}
+.prow:last-child{border-bottom:0}
+.prow.phead{font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;background:var(--soft)}
+.prow.ptot{background:var(--soft);font-weight:600}
+.prow .big,.prow .big .cnum{font-family:Antonio,Arial Narrow,sans-serif;font-size:20px;font-weight:700}
+.cnum{color:var(--ink);text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
+.cnum:hover{color:var(--acc)}
+.zero{color:var(--mut)}
+.prow .fm{display:flex;flex-wrap:wrap;gap:4px}
+.dgrid-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+.dgrid{border-collapse:collapse;font-size:12px;min-width:100%}
+.dgrid th,.dgrid td{border-bottom:1px solid var(--line);padding:5px 3px;text-align:center;min-width:24px}
+.dgrid th{font-weight:500;color:var(--mut);font-size:10px;line-height:1.2}
+.dgrid th.pn{text-align:left;padding-left:10px;color:var(--ink);font-size:12px;font-weight:600;position:sticky;left:0;background:var(--card);min-width:90px}
+.dgrid td[data-act]{cursor:pointer;font-weight:700;color:#0d4f2c}
+.dgrid .dom{background:var(--soft)}
+.dgrid .hoyc{outline:2px solid var(--today);outline-offset:-2px}
+.dgrid td.tt{font-weight:700;color:var(--ink);padding:5px 10px}
+@media(max-width:1000px){
+ .prow.phead{display:none}
+ .prow{grid-template-columns:1fr 1fr 1fr;gap:6px 10px}
+ .prow>span[data-l]::before{content:attr(data-l);display:block;font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;font-family:Inter,system-ui,sans-serif;font-weight:400}
+ .prow>span:first-child,.prow .fm{grid-column:1 / -1}
+ .prow.ptot{grid-template-columns:1fr 1fr 1fr 1fr}
+ .prow.ptot span:nth-child(n+6){display:none}
+}
 .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--mut);margin-bottom:8px}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
 @media(max-width:1000px){
@@ -458,6 +485,75 @@ function toast(msg){
   t.textContent=msg; t.classList.add('on'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('on'),2600);
 }
 
+/* ---------- Producción por persona (terminadas por día y por mes) ---------- */
+const hechas=()=>S.items.filter(i=>i.tipo!=='Pendiente'&&!isOpen(i)&&i.cerrado);
+function viewProduccion(){
+  const t=today(), mes=S.pm||t.slice(0,7);
+  const [Y,M]=mes.split('-').map(Number);
+  const ultimo=new Date(Y,M,0).getDate();
+  const diasMes=[...Array(ultimo)].map((_,k)=>`${mes}-${pad(k+1)}`);
+  const esActual=mes===t.slice(0,7);
+  const corte=esActual?t:diasMes[diasMes.length-1];
+  const habiles=diasMes.filter(x=>x<=corte&&D(x).getDay()!==0).length||1;   // lunes a sábado
+  const dt=D(t), lunes=iso(new Date(dt.getFullYear(),dt.getMonth(),dt.getDate()-((dt.getDay()+6)%7),12));
+  const H=hechas();
+  const filas=[...EQUIPO,''].map(p=>{
+    const mias=H.filter(i=>p?i.responsable===p:!EQUIPO.includes(i.responsable));
+    const enMes=mias.filter(i=>i.cerrado.startsWith(mes));
+    const conFecha=enMes.filter(i=>i.fecha_objetivo);
+    const aTiempo=conFecha.filter(i=>i.cerrado<=i.fecha_objetivo).length;
+    const conIni=enMes.filter(i=>i.fecha_inicio);
+    const dur=conIni.length?conIni.reduce((a,i)=>a+days(i.fecha_inicio,i.cerrado)+1,0)/conIni.length:null;
+    const fmts={}; enMes.forEach(i=>{const f=i.formato||'Sin formato';fmts[f]=(fmts[f]||0)+1});
+    const porDia={}; enMes.forEach(i=>porDia[i.cerrado]=(porDia[i.cerrado]||0)+1);
+    return {p, hoy:mias.filter(i=>i.cerrado===t).length, semana:mias.filter(i=>i.cerrado>=lunes&&i.cerrado<=t).length,
+      mes:enMes.length, prom:enMes.length/habiles, pct:conFecha.length?Math.round(aTiempo/conFecha.length*100):null, dur, fmts, porDia};
+  }).filter(r=>r.p||r.mes||r.hoy||r.semana);
+  const tot=k=>filas.reduce((a,r)=>a+r[k],0);
+  const maxDia=Math.max(1,...filas.flatMap(r=>Object.values(r.porDia)));
+  const meses=[...new Set([t.slice(0,7),...H.map(i=>i.cerrado.slice(0,7))])].sort().reverse();
+  const nomMes=m=>{const [y,mm]=m.split('-');return `${['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'][+mm-1]} ${y}`};
+  const ini=D(diasMes[0]).getDay();
+  return `<div class="panel"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+      <h2 style="margin:0">Producción por persona</h2>
+      <label style="font-size:12px;color:var(--mut);display:flex;gap:6px;align-items:center">Mes <select id="pm">${meses.map(m=>`<option value="${m}" ${m===mes?'selected':''}>${nomMes(m)}</option>`).join('')}</select></label>
+    </div>
+    <p class="hint" style="margin:6px 0 12px">Piezas terminadas (✓ Terminada) por cada editor y diseñador. Toca un número para ver qué piezas son.</p>
+    <div class="ptable">
+      <div class="prow phead"><span>Persona</span><span>Hoy</span><span>Esta semana</span><span>En ${nomMes(mes).split(' ')[0]}</span><span>Promedio diario</span><span>A tiempo</span><span>Días por pieza</span><span>Por formato (mes)</span></div>
+      ${filas.map(r=>`<div class="prow">
+        <span data-l="Persona"><b>${esc(r.p||'Sin asignar')}</b></span>
+        <span data-l="Hoy">${cnt(r.hoy,r.p,'d:'+t)}</span>
+        <span data-l="Esta semana">${cnt(r.semana,r.p,'w:'+lunes)}</span>
+        <span data-l="Mes" class="big">${cnt(r.mes,r.p,'m:'+mes)}</span>
+        <span data-l="Promedio diario">${r.mes?r.prom.toFixed(1):'—'}</span>
+        <span data-l="A tiempo">${r.pct==null?'—':`<span class="tag ${r.pct>=80?'ok':r.pct>=60?'warn':'bad'}">${r.pct}%</span>`}</span>
+        <span data-l="Días por pieza">${r.dur==null?'—':r.dur.toFixed(1)}</span>
+        <span data-l="Por formato" class="fm">${Object.entries(r.fmts).sort((a,b)=>b[1]-a[1]).map(([f,n])=>`<span class="tag">${esc(f)} ${n}</span>`).join(' ')||'—'}</span>
+      </div>`).join('')}
+      <div class="prow ptot"><span><b>Total equipo</b></span><span>${tot('hoy')}</span><span>${tot('semana')}</span><span class="big">${tot('mes')}</span><span>${(tot('mes')/habiles).toFixed(1)}</span><span></span><span></span><span></span></div>
+    </div>
+    <h3 style="margin:18px 0 8px;font-size:16px">Día por día · ${nomMes(mes)}</h3>
+    <div class="dgrid-wrap"><table class="dgrid">
+      <tr><th></th>${diasMes.map(x=>{const dd=D(x);return `<th class="${dd.getDay()===0?'dom':''} ${x===t?'hoyc':''}">${['D','L','M','M','J','V','S'][dd.getDay()]}<br>${dd.getDate()}</th>`}).join('')}<th>Total</th></tr>
+      ${filas.map(r=>`<tr><th class="pn">${esc(r.p||'Sin asignar')}</th>${diasMes.map(x=>{const n=r.porDia[x]||0;
+        return `<td class="${D(x).getDay()===0?'dom':''} ${x===t?'hoyc':''}" ${n?`data-act="prod" data-p="${esc(r.p)}" data-k="d:${x}" style="background:rgba(30,154,87,${(.18+.62*n/maxDia).toFixed(2)})"`:''}>${n||''}</td>`}).join('')}<td class="tt">${r.mes}</td></tr>`).join('')}
+    </table></div>
+  </div>`;
+}
+function cnt(n,p,k){return n?`<a href="#" class="cnum" data-act="prod" data-p="${esc(p)}" data-k="${k}">${n}</a>`:'<span class="zero">0</span>'}
+function modalProd(p,k){
+  const [tipo,val]=k.split(/:(.+)/); const t=today();
+  let its=hechas().filter(i=>p?i.responsable===p:!EQUIPO.includes(i.responsable));
+  its=its.filter(i=>tipo==='d'?i.cerrado===val:tipo==='w'?(i.cerrado>=val&&i.cerrado<=t):i.cerrado.startsWith(val)).sort((a,b)=>b.cerrado.localeCompare(a.cerrado));
+  const tit=tipo==='d'?`el ${fmt(val)}`:tipo==='w'?'esta semana':'en el mes';
+  const m=document.getElementById('modal');
+  m.innerHTML=`<div class="mbox"><div style="display:flex;justify-content:space-between;gap:10px;align-items:start"><div><h2>${esc(p||'Sin asignar')}</h2><p style="color:var(--mut);margin:0">${its.length} pieza${its.length!==1?'s':''} terminada${its.length!==1?'s':''} ${tit}</p></div><button class="btn" data-act="mclose">Cerrar</button></div>
+    <table style="margin-top:12px"><tr><th>Terminada</th><th>Cliente</th><th>Formato</th><th>Video / pieza</th><th>Entrega</th><th></th></tr>
+    ${its.map(i=>{const dl=i.fecha_objetivo?days(i.fecha_objetivo,i.cerrado):0;return `<tr><td>${fmt(i.cerrado)}</td><td><b>${esc(i.cuenta)}</b></td><td>${esc(i.formato||'—')}</td><td>${esc(i.titulo)}</td><td>${fmt(i.fecha_objetivo)}</td><td>${dl>0?`<span class="tag bad">${dl} d tarde</span>`:'<span class="tag ok">a tiempo</span>'}</td></tr>`}).join('')}</table></div>`;
+  m.classList.add('on');
+}
+
 function viewDash(){
   const t=today(), d=D(t);
   const mIni=iso(new Date(d.getFullYear(),d.getMonth(),1,12));
@@ -484,6 +580,7 @@ function viewDash(){
     <div class="kpi ${venc?'bad':''}"><div class="num">${venc}</div><span>Contratos vencidos</span></div>
     <div class="kpi ${porV?'warn':''}"><div class="num">${porV}</div><span>Vencen en ≤15 días</span></div>
   </div>
+  ${viewProduccion()}
   <div class="panel"><h2>Estado por cuenta</h2>
    <div class="legend"><span><i style="background:var(--ok)"></i>Terminado</span><span><i style="background:var(--ink);width:3px"></i>Lo esperado a la fecha</span></div>
    <div class="cards">${rows.map(({c,s})=>`
@@ -543,6 +640,7 @@ document.addEventListener('change',e=>{
   const el=e.target;
   if(el.id==='lf-persona'){S.lf.persona=el.value;render()}
   if(el.id==='lf-cuenta'){S.lf.cuenta=el.value;render()}
+  if(el.id==='pm'){S.pm=el.value;render()}
 });
 document.addEventListener('input',e=>{if(e.target.id==='q'){S.q=e.target.value;clearTimeout(window._qt);window._qt=setTimeout(()=>{render();const q=document.getElementById('q');if(q){q.focus();q.setSelectionRange(q.value.length,q.value.length)}},300)}});
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.closest('.newf')){e.preventDefault();addFrom(e.target.closest('.newf'))} if(e.key==='Escape')closeModal()});
@@ -604,6 +702,7 @@ document.addEventListener('click',async e=>{
       break;
     }
     case 'acct': modalCuenta(c); break;
+    case 'prod': modalProd(a.dataset.p,a.dataset.k); break;
     case 'mclose': closeModal(); break;
     case 'saveActa': {
       const data={fecha:today(),registrado_por:S.user,asistentes:[...document.querySelectorAll('.asis:checked')].map(x=>x.value).join(', '),notas:document.getElementById('acta').value,actualizado:stamp()};
