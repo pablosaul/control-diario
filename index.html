@@ -125,7 +125,7 @@ th{color:var(--mut);font-weight:500;font-size:12px}
  .eform{grid-template-columns:1fr}
 }
 .ptable{border:1px solid var(--line);border-radius:10px;overflow:hidden}
-.prow{display:grid;grid-template-columns:minmax(110px,1.2fr) 60px 90px 80px 90px 80px 90px minmax(160px,2fr);gap:8px;align-items:center;padding:9px 12px;border-bottom:1px solid var(--line);font-size:13px}
+.prow{display:grid;grid-template-columns:minmax(100px,1.1fr) 50px 80px 80px 80px 80px 80px 95px 80px minmax(150px,2fr);gap:8px;align-items:center;padding:9px 12px;border-bottom:1px solid var(--line);font-size:13px}
 .prow:last-child{border-bottom:0}
 .prow.phead{font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;background:var(--soft)}
 .prow.ptot{background:var(--soft);font-weight:600}
@@ -149,7 +149,7 @@ th{color:var(--mut);font-weight:500;font-size:12px}
  .prow>span[data-l]::before{content:attr(data-l);display:block;font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;font-family:Inter,system-ui,sans-serif;font-weight:400}
  .prow>span:first-child,.prow .fm{grid-column:1 / -1}
  .prow.ptot{grid-template-columns:1fr 1fr 1fr 1fr}
- .prow.ptot span:nth-child(n+6){display:none}
+ .prow.ptot span:nth-child(n+9){display:none}
 }
 .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--mut);margin-bottom:8px}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
@@ -485,55 +485,59 @@ function toast(msg){
   t.textContent=msg; t.classList.add('on'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('on'),2600);
 }
 
-/* ---------- Producción por persona (terminadas por día y por mes) ---------- */
-const hechas=()=>S.items.filter(i=>i.tipo!=='Pendiente'&&!isOpen(i)&&i.cerrado);
+/* ---------- Producción por persona: tareas ASIGNADAS (ingresadas) por día y por mes ---------- */
+const fAsig=i=>String(i.creado||'').slice(0,10)||i.fecha_inicio||'';           // fecha en que se ingresó la tarea
+const asignadas=()=>S.items.filter(i=>i.tipo!=='Pendiente'&&fAsig(i));
 function viewProduccion(){
   const t=today(), mes=S.pm||t.slice(0,7);
   const [Y,M]=mes.split('-').map(Number);
   const ultimo=new Date(Y,M,0).getDate();
   const diasMes=[...Array(ultimo)].map((_,k)=>`${mes}-${pad(k+1)}`);
-  const esActual=mes===t.slice(0,7);
-  const corte=esActual?t:diasMes[diasMes.length-1];
+  const corte=mes===t.slice(0,7)?t:diasMes[diasMes.length-1];
   const habiles=diasMes.filter(x=>x<=corte&&D(x).getDay()!==0).length||1;   // lunes a sábado
   const dt=D(t), lunes=iso(new Date(dt.getFullYear(),dt.getMonth(),dt.getDate()-((dt.getDay()+6)%7),12));
-  const H=hechas();
+  const A=asignadas();
   const filas=[...EQUIPO,''].map(p=>{
-    const mias=H.filter(i=>p?i.responsable===p:!EQUIPO.includes(i.responsable));
-    const enMes=mias.filter(i=>i.cerrado.startsWith(mes));
-    const conFecha=enMes.filter(i=>i.fecha_objetivo);
+    const mias=A.filter(i=>p?i.responsable===p:!EQUIPO.includes(i.responsable));
+    const enMes=mias.filter(i=>fAsig(i).startsWith(mes));
+    const term=enMes.filter(i=>!isOpen(i)), pend=enMes.filter(isOpen);
+    const conFecha=term.filter(i=>i.fecha_objetivo&&i.cerrado);
     const aTiempo=conFecha.filter(i=>i.cerrado<=i.fecha_objetivo).length;
-    const conIni=enMes.filter(i=>i.fecha_inicio);
-    const dur=conIni.length?conIni.reduce((a,i)=>a+days(i.fecha_inicio,i.cerrado)+1,0)/conIni.length:null;
     const fmts={}; enMes.forEach(i=>{const f=i.formato||'Sin formato';fmts[f]=(fmts[f]||0)+1});
-    const porDia={}; enMes.forEach(i=>porDia[i.cerrado]=(porDia[i.cerrado]||0)+1);
-    return {p, hoy:mias.filter(i=>i.cerrado===t).length, semana:mias.filter(i=>i.cerrado>=lunes&&i.cerrado<=t).length,
-      mes:enMes.length, prom:enMes.length/habiles, pct:conFecha.length?Math.round(aTiempo/conFecha.length*100):null, dur, fmts, porDia};
+    const porDia={}; enMes.forEach(i=>{const d=fAsig(i);porDia[d]=(porDia[d]||0)+1});
+    return {p, hoy:mias.filter(i=>fAsig(i)===t).length, semana:mias.filter(i=>fAsig(i)>=lunes&&fAsig(i)<=t).length,
+      mes:enMes.length, prom:enMes.length/habiles, term:term.length, pend:pend.length,
+      cumpl:enMes.length?Math.round(term.length/enMes.length*100):null,
+      pct:conFecha.length?Math.round(aTiempo/conFecha.length*100):null, fmts, porDia};
   }).filter(r=>r.p||r.mes||r.hoy||r.semana);
   const tot=k=>filas.reduce((a,r)=>a+r[k],0);
   const maxDia=Math.max(1,...filas.flatMap(r=>Object.values(r.porDia)));
-  const meses=[...new Set([t.slice(0,7),...H.map(i=>i.cerrado.slice(0,7))])].sort().reverse();
+  const meses=[...new Set([t.slice(0,7),...A.map(i=>fAsig(i).slice(0,7))])].sort().reverse();
   const nomMes=m=>{const [y,mm]=m.split('-');return `${['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'][+mm-1]} ${y}`};
-  const ini=D(diasMes[0]).getDay();
+  const tag=(v,a,b)=>v==null?'—':`<span class="tag ${v>=a?'ok':v>=b?'warn':'bad'}">${v}%</span>`;
+  const tM=tot('mes'), tT=tot('term');
   return `<div class="panel"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
-      <h2 style="margin:0">Producción por persona</h2>
+      <h2 style="margin:0">Tareas asignadas por persona</h2>
       <label style="font-size:12px;color:var(--mut);display:flex;gap:6px;align-items:center">Mes <select id="pm">${meses.map(m=>`<option value="${m}" ${m===mes?'selected':''}>${nomMes(m)}</option>`).join('')}</select></label>
     </div>
-    <p class="hint" style="margin:6px 0 12px">Piezas terminadas (✓ Terminada) por cada editor y diseñador. Toca un número para ver qué piezas son.</p>
+    <p class="hint" style="margin:6px 0 12px">Cuenta cada tarea ingresada para el editor o diseñador según el día en que se registró. El promedio diario es sobre días de lunes a sábado. Toca un número para ver las tareas.</p>
     <div class="ptable">
-      <div class="prow phead"><span>Persona</span><span>Hoy</span><span>Esta semana</span><span>En ${nomMes(mes).split(' ')[0]}</span><span>Promedio diario</span><span>A tiempo</span><span>Días por pieza</span><span>Por formato (mes)</span></div>
+      <div class="prow phead"><span>Persona</span><span>Hoy</span><span>Esta semana</span><span>En ${nomMes(mes).split(' ')[0]}</span><span>Promedio diario</span><span>Terminadas</span><span>Pendientes</span><span>Cumplimiento</span><span>A tiempo</span><span>Por formato (mes)</span></div>
       ${filas.map(r=>`<div class="prow">
         <span data-l="Persona"><b>${esc(r.p||'Sin asignar')}</b></span>
         <span data-l="Hoy">${cnt(r.hoy,r.p,'d:'+t)}</span>
         <span data-l="Esta semana">${cnt(r.semana,r.p,'w:'+lunes)}</span>
         <span data-l="Mes" class="big">${cnt(r.mes,r.p,'m:'+mes)}</span>
         <span data-l="Promedio diario">${r.mes?r.prom.toFixed(1):'—'}</span>
-        <span data-l="A tiempo">${r.pct==null?'—':`<span class="tag ${r.pct>=80?'ok':r.pct>=60?'warn':'bad'}">${r.pct}%</span>`}</span>
-        <span data-l="Días por pieza">${r.dur==null?'—':r.dur.toFixed(1)}</span>
+        <span data-l="Terminadas">${cnt(r.term,r.p,'m:'+mes+':t')}</span>
+        <span data-l="Pendientes">${r.pend?cnt(r.pend,r.p,'m:'+mes+':p'):'<span class="zero">0</span>'}</span>
+        <span data-l="Cumplimiento">${tag(r.cumpl,80,50)}</span>
+        <span data-l="A tiempo">${tag(r.pct,80,60)}</span>
         <span data-l="Por formato" class="fm">${Object.entries(r.fmts).sort((a,b)=>b[1]-a[1]).map(([f,n])=>`<span class="tag">${esc(f)} ${n}</span>`).join(' ')||'—'}</span>
       </div>`).join('')}
-      <div class="prow ptot"><span><b>Total equipo</b></span><span>${tot('hoy')}</span><span>${tot('semana')}</span><span class="big">${tot('mes')}</span><span>${(tot('mes')/habiles).toFixed(1)}</span><span></span><span></span><span></span></div>
+      <div class="prow ptot"><span><b>Total equipo</b></span><span>${tot('hoy')}</span><span>${tot('semana')}</span><span class="big">${tM}</span><span>${(tM/habiles).toFixed(1)}</span><span>${tT}</span><span>${tot('pend')}</span><span>${tM?Math.round(tT/tM*100)+'%':'—'}</span><span></span><span></span></div>
     </div>
-    <h3 style="margin:18px 0 8px;font-size:16px">Día por día · ${nomMes(mes)}</h3>
+    <h3 style="margin:18px 0 8px;font-size:16px">Asignadas día por día · ${nomMes(mes)}</h3>
     <div class="dgrid-wrap"><table class="dgrid">
       <tr><th></th>${diasMes.map(x=>{const dd=D(x);return `<th class="${dd.getDay()===0?'dom':''} ${x===t?'hoyc':''}">${['D','L','M','M','J','V','S'][dd.getDay()]}<br>${dd.getDate()}</th>`}).join('')}<th>Total</th></tr>
       ${filas.map(r=>`<tr><th class="pn">${esc(r.p||'Sin asignar')}</th>${diasMes.map(x=>{const n=r.porDia[x]||0;
@@ -543,14 +547,17 @@ function viewProduccion(){
 }
 function cnt(n,p,k){return n?`<a href="#" class="cnum" data-act="prod" data-p="${esc(p)}" data-k="${k}">${n}</a>`:'<span class="zero">0</span>'}
 function modalProd(p,k){
-  const [tipo,val]=k.split(/:(.+)/); const t=today();
-  let its=hechas().filter(i=>p?i.responsable===p:!EQUIPO.includes(i.responsable));
-  its=its.filter(i=>tipo==='d'?i.cerrado===val:tipo==='w'?(i.cerrado>=val&&i.cerrado<=t):i.cerrado.startsWith(val)).sort((a,b)=>b.cerrado.localeCompare(a.cerrado));
-  const tit=tipo==='d'?`el ${fmt(val)}`:tipo==='w'?'esta semana':'en el mes';
+  const [tipo,val,est]=k.split(':'); const t=today();
+  let its=asignadas().filter(i=>p?i.responsable===p:!EQUIPO.includes(i.responsable));
+  its=its.filter(i=>{const f=fAsig(i);return tipo==='d'?f===val:tipo==='w'?(f>=val&&f<=t):f.startsWith(val)});
+  if(est==='t') its=its.filter(i=>!isOpen(i)); if(est==='p') its=its.filter(isOpen);
+  its.sort((a,b)=>fAsig(b).localeCompare(fAsig(a)));
+  const tit=(est==='t'?'terminadas ':est==='p'?'pendientes ':'')+(tipo==='d'?`asignadas el ${fmt(val)}`:tipo==='w'?'asignadas esta semana':'asignadas en el mes');
   const m=document.getElementById('modal');
-  m.innerHTML=`<div class="mbox"><div style="display:flex;justify-content:space-between;gap:10px;align-items:start"><div><h2>${esc(p||'Sin asignar')}</h2><p style="color:var(--mut);margin:0">${its.length} pieza${its.length!==1?'s':''} terminada${its.length!==1?'s':''} ${tit}</p></div><button class="btn" data-act="mclose">Cerrar</button></div>
-    <table style="margin-top:12px"><tr><th>Terminada</th><th>Cliente</th><th>Formato</th><th>Video / pieza</th><th>Entrega</th><th></th></tr>
-    ${its.map(i=>{const dl=i.fecha_objetivo?days(i.fecha_objetivo,i.cerrado):0;return `<tr><td>${fmt(i.cerrado)}</td><td><b>${esc(i.cuenta)}</b></td><td>${esc(i.formato||'—')}</td><td>${esc(i.titulo)}</td><td>${fmt(i.fecha_objetivo)}</td><td>${dl>0?`<span class="tag bad">${dl} d tarde</span>`:'<span class="tag ok">a tiempo</span>'}</td></tr>`}).join('')}</table></div>`;
+  m.innerHTML=`<div class="mbox"><div style="display:flex;justify-content:space-between;gap:10px;align-items:start"><div><h2>${esc(p||'Sin asignar')}</h2><p style="color:var(--mut);margin:0">${its.length} tarea${its.length!==1?'s':''} ${tit}</p></div><button class="btn" data-act="mclose">Cerrar</button></div>
+    <table style="margin-top:12px"><tr><th>Asignada</th><th>Cliente</th><th>Formato</th><th>Video / pieza</th><th>Entrega</th><th>Estado</th></tr>
+    ${its.map(i=>{const o=isOpen(i), late=o&&i.fecha_objetivo&&i.fecha_objetivo<t, dl=!o&&i.fecha_objetivo&&i.cerrado?days(i.fecha_objetivo,i.cerrado):0;
+      return `<tr><td>${fmt(fAsig(i))}</td><td><b>${esc(i.cuenta)}</b></td><td>${esc(i.formato||'—')}</td><td>${esc(i.titulo)}</td><td>${fmt(i.fecha_objetivo)}</td><td>${o?`<span class="tag ${late?'bad':''}">${esc(i.etapa)}${late?' · atrasada':''}</span>`:`<span class="tag ok">✓ ${fmt(i.cerrado)}</span>${dl>0?` <span class="tag bad">${dl} d tarde</span>`:''}`}</td></tr>`}).join('')}</table></div>`;
   m.classList.add('on');
 }
 
